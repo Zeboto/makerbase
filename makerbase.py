@@ -1,6 +1,11 @@
-from pymongo import MongoClient
+import json
 import datetime
+from bson import json_util
+from bson.objectid import ObjectId
+from pymongo import MongoClient
 
+def parse_json(data):
+    return json.loads(json_util.dumps(data))
 
 class MakerBase:
 
@@ -13,10 +18,10 @@ class MakerBase:
     def search_drawer(self, drawer_name):
         results = [x for x in self.db['items'].find(
             {"category": {'$regex': drawer_name}})]
-        return results
+        return parse_json(results)
 
     def create_drawer(self, drawer_name, id):
-        self.db["drawers"].insert_one(
+        return self.db["drawers"].insert_one(
             {
                 "drawer_id": id,
                 "category": drawer_name,
@@ -30,17 +35,17 @@ class MakerBase:
     def search_item(self, item_name):
         results = [x for x in self.db['items'].find(
             {"item_name": {'$regex': item_name}})]
-        return results
+        return parse_json(results)
 
     def create_item(self, item_name, drawer_id, user_id, quantity):
-        self.db["items"].insert_one(
+        r = self.db["items"].insert_one(
             {
                 "drawer_id": drawer_id,
                 "item_name": item_name,
                 "history": [
                     {
                         "action": "add",
-                        "quantity": quantity,
+                        "quantity": int(quantity),
                         "user_id": user_id,
                         "datetime": datetime.datetime.now(),
                     }
@@ -48,72 +53,73 @@ class MakerBase:
 
             }
         )
-        self.calculate_fields()
+        self.calculate_fields(r.inserted_id)
+        return r
 
     def add_item(self, item_id, user_id, quantity):
         self.db["items"].update_one(
-            { '_id': item_id },
+            { '_id': ObjectId(item_id) },
             { '$push': { 
                 'history': {
                         "action": "add",
-                        "quantity": quantity,
+                        "quantity": int(quantity),
                         "user_id": user_id,
                         "datetime": datetime.datetime.now(),
                     }
                 }
             }
         )
-        self.calculate_fields()
+        self.calculate_fields(item_id)
 
     def remove_item(self, item_id, user_id, quantity):
         self.db["items"].update_one(
-            { '_id': item_id },
+            { '_id': ObjectId(item_id) },
             { '$push': { 
                 'history': {
                         "action": "remove",
-                        "quantity": quantity,
+                        "quantity": int(quantity),
                         "user_id": user_id,
                         "datetime": datetime.datetime.now(),
                     }
                 }
             }
         )
-        self.calculate_fields()
+        self.calculate_fields(item_id)
     
     def borrow_item(self, item_id, user_id, quantity):
         self.db["items"].update_one(
-            { '_id': item_id },
+            { '_id': ObjectId(item_id) },
             { '$push': { 
                 'history': {
                         "action": "borrow",
-                        "quantity": quantity,
+                        "quantity": int(quantity),
                         "user_id": user_id,
                         "datetime": datetime.datetime.now(),
                     }
                 }
             }
         )
-        self.calculate_fields()
+        self.calculate_fields(item_id)
     
     def return_item(self, item_id, user_id, quantity):
         self.db["items"].update_one(
-            { '_id': item_id },
+            { '_id': ObjectId(item_id) },
             { '$push': { 
                 'history': {
                         "action": "return",
-                        "quantity": quantity,
+                        "quantity": int(quantity),
                         "user_id": user_id,
                         "datetime": datetime.datetime.now(),
                     }
                 }
             }
         )
-        self.calculate_fields()
+        self.calculate_fields(item_id)
 
-    def calculate_fields(self):
-        result = self.db['items'].aggregate([
+    def calculate_fields(self,item_id):
+        result = self.db['items'].update_one({'_id': ObjectId(item_id)}, [
             {
-                '$addFields': {
+                '$set': {
                     'current_quantity': {
                         '$sum': {
                             '$map': {
@@ -133,7 +139,9 @@ class MakerBase:
                                                     ]
                                                 }
                                             ]
-                                        }, '$$hh.quantity', {
+                                        }, 
+                                        '$$hh.quantity', 
+                                        {
                                             '$subtract': [
                                                 0, '$$hh.quantity'
                                             ]
@@ -175,3 +183,4 @@ class MakerBase:
                 }
             }
         ])
+        return result
