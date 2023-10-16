@@ -1,0 +1,2 @@
+[database]
+url = 'mongodb://localhost:9999/'
