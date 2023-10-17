@@ -1,2 +1,2 @@
 [database]
-url = 'mongodb://localhost:9999/'
+url = 'mongodb://localhost:27017/'
