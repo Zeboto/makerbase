@@ -14,6 +14,14 @@ db = MakerBase(config)
 def search_drawer(drawer_name):
     return db.search_item(drawer_name)
 
+@app.route('/highlight_drawer/<drawer_id>', methods=['GET'])
+def highlight_drawer(drawer_id):
+    db.start_search(drawer_id)
+    return {
+        "message":"Success", 
+        }, 200
+
+
 @app.route('/create_drawer/<drawer_name>/<id>', methods=['POST'])
 def create_drawer(drawer_name, id):
     result = db.create_drawer(drawer_name, id)
