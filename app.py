@@ -16,7 +16,7 @@ def search_drawer(drawer_name):
 
 @app.route('/highlight_drawer/<drawer_id>', methods=['GET'])
 def highlight_drawer(drawer_id):
-    db.start_search(drawer_id)
+    db.start_search(int(drawer_id))
     return {
         "message":"Success", 
         }, 200

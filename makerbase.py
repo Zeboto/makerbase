@@ -49,47 +49,47 @@ class MakerBase:
                    args=(self.loop,), daemon=True)
         t.start()
 
-        self.task = self.loop.create_task(self.idle_animation())
+        self.task = None
+        self.start_idle()
+        print('task started')
 
     async def replace_task(self, new_task):
-        self.task.cancel()
-        await self.task
-        self.task = self.loop.create_task(new_task)
+        if self.task:
+            self.task.cancel()
+        self.task = asyncio.run_coroutine_threadsafe(new_task, self.loop)
         print('created task')
 
     async def idle_animation(self):
         try:
-            animations = [
-                colorWipe(strip, Color(255, 20, 0), 10),
-                colorWipe(strip, Color(0, 255, 255)),
-                colorWipe(strip, Color(0, 0, 255)),
-                rainbow(strip),
-                rainbowCycle(strip)
-            ]
+            await asyncio.sleep(1)
+            print('starting idle')
             while True:
-                random.shuffle(animations)
-                for a in animations:
-                    await a
+                await colorWipe(strip, Color(255, 20, 0), 10)
+                await colorWipe(strip, Color(0, 255, 255))
+                await colorWipe(strip, Color(0, 0, 255))
+                await rainbow(strip)
+                await rainbowCycle(strip)
         except asyncio.CancelledError:
             print('cancelled idle')
         finally:
             print('clearing idle task')
 
     def start_idle(self):
-        self.loop.create_task(self.replace_task(self.idle_animation()))
+        asyncio.run_coroutine_threadsafe(self.replace_task(self.idle_animation()), self.loop)
 
     async def search_animation(self, drawer_id):
         try:
+            await asyncio.sleep(1)
+            print('starting search')
             await find_drawer(strip, drawer_id)
-            self.task = self.loop.create_task(self.idle_animation())
+            self.start_idle()
         except asyncio.CancelledError:
             print('cancelled search')
         finally:
             print('clearing search task')
 
     def start_search(self, drawer_id):
-        self.loop.create_task(self.replace_task(
-            self.search_animation(drawer_id)))
+        asyncio.run_coroutine_threadsafe(self.replace_task(self.search_animation(drawer_id)), self.loop)
 
     def search_drawer(self, drawer_name):
         results = [x for x in self.db['items'].find(

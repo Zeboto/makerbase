@@ -97,8 +97,8 @@ async def loading(strip: PixelStrip, stop=None):
             break
 
 async def find_drawer(strip: PixelStrip, drawer_id):
-    loading()
-    loading(stop=drawer_id)
+    await loading(strip)
+    await loading(strip, stop=drawer_id)
     color = Color(0,255,0)
     for j in range(4):
         for i in drawers[drawer_id]:
@@ -112,7 +112,7 @@ async def find_drawer(strip: PixelStrip, drawer_id):
         strip.show()
         await asyncio.sleep(.3)
     await asyncio.sleep(3)
-    await clearBoard(strip, Color(0, 0, 0), 5)
+    await clearBoard(strip, Color(0, 0, 0))
 
 
 
